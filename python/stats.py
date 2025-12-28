@@ -25,6 +25,7 @@ def get_data():
     })
 
 def plot_avg_sizes(df):
+    """Plots average size of journal entries vs time on a log scale."""
     df.copy()
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date")
