@@ -6,148 +6,183 @@ import re
 from datetime import datetime, date, timedelta
 from collections import Counter
 
-def main():
-    choice = input(
-        "Choose an option.\n"
-        "1: occurrences of a string over time\n"
-        "2: data of journal sizes\n"
-        "--> "
+def get_byte_sizes():
+    num = (date.today() - date(2024, 1, 1)).days + 1
+    dates = (np.datetime64("2024-01-01") + np.arange(num, dtype="timedelta64[D]")).astype(str)
+
+    byte_sizes = np.empty(num, dtype=int)
+    for i, d in enumerate(dates):
+        path = f"/Users/olympus/Documents/journalEntries/{d.replace('-', '.')}.txt"
+        if not os.path.exists(path):
+            raise ValueError(f"path: {path} does not exist")
+        with open(path, "rb") as f:
+            byte_sizes[i] = len(f.read())
+
+    return pd.DataFrame({
+        "date": dates,
+        "byte_size": byte_sizes,
+    })
+
+def plot_avg_sizes(df, use_log_scale: bool=True):
+    df.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date")
+
+    df["sma20"] = df["byte_size"].rolling(window=20, min_periods=1).mean()
+    df["sma50"] = df["byte_size"].rolling(window=50, min_periods=1).mean()
+    df["sma100"] = df["byte_size"].rolling(window=100, min_periods=1).mean()
+
+    ax = df.plot(
+        x="date",
+        y=["byte_size", "sma20", "sma50", "sma100"],
+        style=[".", "-", "-"],
+        markersize=6
     )
 
-    if choice == "1":
-        string_occurrences_over_time()
-    elif choice == "2":
-        basic_stats()
+    ax.lines[0].set_alpha(0.4)
 
-def basic_stats():
-    days = (date.today() - date(2024, 1, 1)).days + 1
-    byte_sizes = np.zeros(days)
+    if use_log_scale:
+        ax.set_yscale("log", base=2)
 
-    for i in range(days):
-
-        dt = datetime(2024, 1, 1) + timedelta(days=i)
-        formatted_date = dt.strftime("%Y.%m.%d")
-        path = f"/Users/olympus/Documents/journalEntries/{formatted_date}.txt"
-
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read()
-            byte_sizes[i] = len(text.encode("utf-8"))
-
-        else:
-            print("uh oh... missing a journal entry somewhere")
-
-    # ChatGPT boilerplate, cleaned by me
-
-    valid_sizes = byte_sizes[byte_sizes > 0]
-    mean_size = np.mean(valid_sizes)
-    median_size = np.median(valid_sizes)
-    min_size = np.min(valid_sizes)
-    std_size = np.std(valid_sizes)
-
-    # Basic stats
-    print("Journal Entry Statistics")
-    print(f"Mean size: {mean_size:.2f} bytes")
-    print(f"Median size: {median_size:.2f} bytes")
-    print(f"Standard deviation: {std_size:.2f} bytes")
-    print(f"Total entries: {len(valid_sizes)} / {days} days recorded")
-
-    # Histogram
-    plt.figure(figsize=(10, 6))
-    plt.hist(byte_sizes[byte_sizes > 0], 
-             bins=50, edgecolor='black', alpha=0.7)
-    plt.title("Distribution of Journal Entry Sizes (in bytes)", fontsize=16)
-    plt.xlabel("Byte Size", fontsize=14)
-    plt.ylabel("Frequency", fontsize=14)
-    plt.axvline(mean_size, 
-                color='red', 
-                linestyle='-', 
-                linewidth=2,
-                label=f"Mean: {mean_size:.0f}")
-    plt.axvline(median_size, 
-                color='green', 
-                linestyle='-', 
-                linewidth=2,
-                label=f"Median: {median_size:.0f}") 
-    plt.axvline(min_size,
-                color='orange',
-                linestyle='-',
-                linewidth=2,
-                label=f"Min: {min_size:.0f}")
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-
-    plt.legend()
+    ax.grid(True, linewidth=0.5, alpha=0.3)
+    ax.set_ylabel("bytes")
+    ax.set_title("byte_size vs. time")
     plt.show()
 
-def string_occurrences_over_time():
-    search_term = input("Enter search term: ").strip()
-    days = (date.today() - date(2024, 1, 1)).days + 1
-    occurrences = np.zeros(shape=days)
-    entry_sizes = np.zeros(shape=days)
+def tokenize(text):
+    return re.findall(r"[a-z']+", text.lower())
 
-    for i in range(days):
-        dt = datetime(2024, 1, 1) + timedelta(days=i)
-        formatted_date = dt.strftime("%Y.%m.%d")
-        path = f"/Users/olympus/Documents/journalEntries/{formatted_date}.txt"
+def find_most_common_words(df, num_of_words: int):
+    paths = [
+        f"/Users/olympus/Documents/journalEntries/{d.strftime('%Y.%m.%d')}.txt"
+        for d in df["date"]
+    ]
 
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read()
-            count = text.lower().count(search_term.lower())
-            occurrences[i] = count
-            entry_sizes[i] = len(text.encode("utf-8"))
+    counter = Counter()
 
-        else:
-            occurrences[i] = 0
-            entry_sizes[i] = 0
+    for path in paths:
+        with open(path, "r", encoding="utf-8") as f:
+            counter.update(tokenize(f.read()))
 
-    dates = pd.date_range(start=date(2024, 1, 1), periods=len(occurrences),
-                          freq="D")
-    s_occ = pd.Series(occurrences, index=dates)
-    s_size = pd.Series(entry_sizes, index=dates)
-    occ_per_kb = s_occ / (s_size / 1024)
-    window1 = 10
-    
-    rolling_occ = s_occ.rolling(window=window1, center=True).mean()
-    rolling_occ_per_kb = occ_per_kb.rolling(window=window1, center=True).mean()
-    rolling_size = s_size.rolling(window=100, center=True).mean()
+    print("Most common words:")
+    for word, count in counter.most_common(num_of_words):
+        print(f"{word:<15} {count}")
+
+def plot_string_occurrences_over_time(
+    df: pd.DataFrame,
+    search_term: str,
+    entries_dir: str = "/Users/olympus/Documents/journalEntries",
+    window_occ: int = 10,
+    window_size: int = 100,
+    use_log_scale_size: bool = False,
+):
+    """
+    Plot raw occurrences and occurrences per KB of `search_term` over time,
+    alongside smoothed entry byte sizes.
+
+    Expects df to contain:
+      - "date": str or datetime-like
+      - optionally "byte_size": int (bytes). If missing, it will be computed by reading files as bytes.
+
+    Returns a DataFrame with per-day metrics.
+    """
+    if df is None or "date" not in df.columns:
+        raise ValueError("df must be a DataFrame with a 'date' column")
+
+    if not isinstance(search_term, str) or not search_term.strip():
+        raise ValueError("search_term must be a non-empty string")
+    search_term = search_term.strip()
+
+    data = df.copy()
+    data["date"] = pd.to_datetime(data["date"])
+    data = data.sort_values("date").reset_index(drop=True)
+
+    # Build paths for each date using the same formatting as your other functions
+    data["path"] = data["date"].dt.strftime("%Y.%m.%d").map(lambda s: f"{entries_dir}/{s}.txt")
+
+    # Ensure byte_size exists; compute if needed
+    if "byte_size" not in data.columns:
+        byte_sizes = np.empty(len(data), dtype=int)
+        for i, path in enumerate(data["path"]):
+            if not os.path.exists(path):
+                raise ValueError(f"path: {path} does not exist")
+            with open(path, "rb") as f:
+                byte_sizes[i] = len(f.read())
+        data["byte_size"] = byte_sizes
+
+    occurrences = np.zeros(len(data), dtype=float)
+    for i, path in enumerate(data["path"]):
+        if not os.path.exists(path):
+            raise ValueError(f"path: {path} does not exist")
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+        occurrences[i] = text.lower().count(search_term.lower())
+
+    data["occurrences"] = occurrences
+
+    # Avoid divide-by-zero; per-KB will be NaN where byte_size is 0
+    data["occ_per_kb"] = data["occurrences"] / (data["byte_size"] / 1024.0).replace(0, np.nan)
+
+    data["occ_sma"] = data["occurrences"].rolling(window=window_occ, center=True, min_periods=1).mean()
+    data["occ_per_kb_sma"] = data["occ_per_kb"].rolling(window=window_occ, center=True, min_periods=1).mean()
+    data["size_sma"] = data["byte_size"].rolling(window=window_size, center=True, min_periods=1).mean()
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
 
-    # Left axis: occurrences
-    ax1.plot(s_occ.index, rolling_occ, color="blue", linewidth=2,
-             label=f"{window1}-day avg '{search_term}' count")
-    ax1.scatter(s_occ.index, s_occ.values, color="lightgray", s=10, alpha=0.5)
-    ax1.plot(s_occ.index, rolling_occ_per_kb, color="green", linewidth=2,
-             linestyle="-", label=f"{window1}-day avg '{search_term}' per KB")
-
+    # Left axis: occurrences + occurrences per KB
+    ax1.plot(
+        data["date"],
+        data["occ_sma"],
+        linewidth=2,
+        label=f"{window_occ}-day avg '{search_term}' count",
+    )
+    ax1.scatter(data["date"], data["occurrences"], s=10, alpha=0.5)
+    ax1.plot(
+        data["date"],
+        data["occ_per_kb_sma"],
+        linewidth=2,
+        linestyle="-",
+        label=f"{window_occ}-day avg '{search_term}' per KB",
+    )
     ax1.set_xlabel("Date")
-    ax1.set_ylabel("Normalized Occurrences", color="blue")
-    ax1.tick_params(axis="y", labelcolor="blue")
+    ax1.set_ylabel("Occurrences (raw & per KB)")
+    ax1.grid(True, linewidth=0.5, alpha=0.3)
 
-    # Right axis: journal size (100-day smoothing)
+    # Right axis: size
     ax2 = ax1.twinx()
-    ax2.plot(s_size.index, rolling_size, color="red", linewidth=2,
-             linestyle="--", label="100-day avg size")
-    ax2.set_ylabel("Journal size (bytes)", color="red")
-    ax2.tick_params(axis="y", labelcolor="red")
+    ax2.plot(
+        data["date"],
+        data["size_sma"],
+        linewidth=2,
+        linestyle="--",
+        label=f"{window_size}-day avg size (bytes)",
+    )
+    ax2.set_ylabel("Journal size (bytes)")
 
-    # Force right axis from 0 to max
-    if not rolling_size.isna().all():
-        ax2.set_ylim(0, rolling_size.max())
+    if use_log_scale_size:
+        ax2.set_yscale("log", base=2)
+    else:
+        if not data["size_sma"].isna().all():
+            ax2.set_ylim(0, float(data["size_sma"].max()))
 
     plt.title(
         f"Occurrences of '{search_term}' & Avg Journal Size "
-        f"(occ: {window1}-day, size: 100-day rolling average)"
+        f"(occ: {window_occ}-day, size: {window_size}-day rolling average)"
     )
     fig.tight_layout()
 
-    # Combine legends from both axes
+    # Combine legends
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper left")
 
     plt.show()
+
+def main():
+    df = get_byte_sizes()
+    plot_avg_sizes(df)
+    find_most_common_words(df, 1000)
+    plot_string_occurrences_over_time(df, "pickleball")
 
 if __name__ == "__main__":
     main()
