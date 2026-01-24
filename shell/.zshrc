@@ -1,6 +1,6 @@
 alias edj='vim "$HOME/Documents/journalEntries/$(date +%Y.%m.%d).txt"'
 alias cje="cd ~/Documents/journalEntries"
-alias je="$HOME/Documents/journal-utils/bash/je.sh"
+alias je="$HOME/Documents/journal-utils/shell/je.sh"
 
 browse() {
   cd ~/Documents/journalEntries/ || return
