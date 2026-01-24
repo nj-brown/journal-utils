@@ -3,37 +3,24 @@ set -euo pipefail
 shopt -s nullglob
 
 DIR="$HOME/Documents/journalEntries"
-years=(2024 2025)
 
-days_in_full_year() {
-  local y=$1
-  if (( y == 2024 || y == 2028 )); then
-    echo 366
-  else
-    echo 365
-  fi }
+first=$(ls -l "$DIR"/2024.*.txt | wc -l)
+second=$(ls -l "$DIR"/2025.*.txt | wc -l)
+third=$(ls -l "$DIR"/2026.*.txt | wc -l)
+sum=$((first + second + third))
 
-echo
-for year in "${years[@]}"; do
-  entries=( "$DIR"/${year}.*.txt )
-  entry_count=${#entries[@]}
+in_previous_years=$((366 + 365 + 0))
+in_latest_year=$((10#$(date +%j)))
+total_days=$((in_previous_years + in_latest_year))
 
-  if [ "$year" -eq 2025 ]; then
-    days_in_year=$(date +%j)
-  else
-    # Full days in that year
-    days_in_year=$(days_in_full_year "$year")
+count=0
+for file in "$DIR"/20{24,25,26}*.txt; do
+  if LC_ALL=C grep -q "[^ -~]" "$file"; then
+    # echo "$file"
+    ((count++))
   fi
-
-  printf "%d: %d/%d entries/days\n" \
-         "$year" "$entry_count" "$days_in_year"
 done
 
-echo
-echo "latest 7:"
-ls -l "$DIR" | tail -n 7
-
-echo
-echo "shortest 7:"
-ls -lS "$DIR" | tail -n 7
-echo
+echo -n "$sum/$total_days | "
+echo -n "$count non-ASCII files | shortest: "
+ls -lS "$DIR" | tail -n 1 | awk ' {print $5 "B on", $9}'

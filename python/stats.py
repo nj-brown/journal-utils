@@ -75,7 +75,7 @@ def most_common_words(df):
 def main():
     df = get_data()
     plot_avg_sizes(df)
-    most_common_words(df)
+    # most_common_words(df)
 
 if __name__ == "__main__":
     main()
