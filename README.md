@@ -1,17 +1,17 @@
 # journal-utils
 
-Selected scripts (bash & python) for stuff mentioned in [njbrown.com/tags/journaling](https://www.njbrown.com/tags/journaling/), specifically articles 48, 67, and 73.
+Selected scripts (shell & python) for stuff mentioned in [njbrown.com/tags/journaling](https://www.njbrown.com/tags/journaling/), specifically articles 48, 67, and 73.
 
 Basic overview:
 
 ```
-/bash/.zshrc:
+/shell/.zshrc:
     alias "edj": edit daily journal entry
     alias "cje": cd into journalEntries directory
     alias "je": run je.sh (checker script)
     function "browse": page through journal entries
     function "search": grep for query (with highlighting)
-/bash/je.sh:
+/shell/je.sh:
     purposes:
     (1) ensure streak intact (no entries missing)
     (2) ensure no entries have non-ASCII characters
