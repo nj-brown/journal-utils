@@ -5,7 +5,7 @@ Selected scripts (shell & python) for stuff mentioned in [njbrown.com/tags/journ
 Basic overview:
 
 ```
-/shell/.zshrc:
+/shell/zshrc:
     alias "edj": edit daily journal entry
     alias "cje": cd into journalEntries directory
     alias "je": run je.sh (checker script)
