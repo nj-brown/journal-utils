@@ -1,6 +1,6 @@
 # journal-utils
 
-Selected scripts (shell & python) for stuff mentioned in [njbrown.com/tags/journaling](https://www.njbrown.com/tags/journaling/), specifically articles 48, 67, and 73.
+Selected scripts for articles in [njbrown.com/tags/journaling](https://www.njbrown.com/tags/journaling/).
 
 Basic overview:
 
@@ -22,6 +22,6 @@ Basic overview:
     plot_string_occurrences_over_time: self-explanatory
 ```
 
-The scripts & utilities make my life far more convenient and allow me to keep my 800+ daily journaling streak much more easily.
+The scripts & utilities make my life more convenient and allow me to keep my 800+ daily journaling streak more easily.
 
 License: MIT
