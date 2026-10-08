@@ -22,6 +22,6 @@ Basic overview:
     plot_string_occurrences_over_time: self-explanatory
 ```
 
-The scripts are convenient and help me keep my 900-day+ daily journaling streak more easily.
+The scripts are convenient and help me keep my 1000-day+ daily journaling streak more easily.
 
 License: MIT
